@@ -1,8 +1,12 @@
 #![allow(non_snake_case)]
 
+<<<<<<< HEAD
 use clear_on_drop::clear::Clear;
 use core::borrow::BorrowMut;
+=======
+>>>>>>> oleg/modernized-toolchain
 use core::mem;
+use zeroize::Zeroize;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::{Identity, MultiscalarMul};
@@ -74,22 +78,22 @@ pub struct RandomizingProver<'g, T: BorrowMut<Transcript>> {
 /// Overwrite secrets with null bytes when they go out of scope.
 impl Drop for Secrets {
     fn drop(&mut self) {
-        self.v.clear();
-        self.v_blinding.clear();
+        self.v.zeroize();
+        self.v_blinding.zeroize();
 
         // Important: due to how ClearOnDrop auto-implements InitializableFromZeroed
-        // for T: Default, calling .clear() on Vec compiles, but does not
+        // for T: Default, calling .zeroize() on Vec compiles, but does not
         // clear the content. Instead, it only clears the Vec's header.
         // Clearing the underlying buffer item-by-item will do the job, but will
         // keep the header as-is, which is fine since the header does not contain secrets.
         for e in self.a_L.iter_mut() {
-            e.clear();
+            e.zeroize();
         }
         for e in self.a_R.iter_mut() {
-            e.clear();
+            e.zeroize();
         }
         for e in self.a_O.iter_mut() {
-            e.clear();
+            e.zeroize();
         }
         // XXX use ClearOnDrop instead of doing the above
     }
@@ -120,8 +124,8 @@ impl<'g, T: BorrowMut<Transcript>> ConstraintSystem for Prover<'g, T> {
         self.secrets.a_O.push(o);
 
         // Constrain l,r,o:
-        left.terms.push((l_var, -Scalar::one()));
-        right.terms.push((r_var, -Scalar::one()));
+        left.terms.push((l_var, -Scalar::ONE));
+        right.terms.push((r_var, -Scalar::ONE));
         self.constrain(left);
         self.constrain(right);
 
@@ -135,9 +139,15 @@ impl<'g, T: BorrowMut<Transcript>> ConstraintSystem for Prover<'g, T> {
             None => {
                 let i = self.secrets.a_L.len();
                 self.pending_multiplier = Some(i);
+<<<<<<< HEAD
                 self.secrets.a_L.push(scalar);
                 self.secrets.a_R.push(Scalar::zero());
                 self.secrets.a_O.push(Scalar::zero());
+=======
+                self.a_L.push(scalar);
+                self.a_R.push(Scalar::ZERO);
+                self.a_O.push(Scalar::ZERO);
+>>>>>>> oleg/modernized-toolchain
                 Ok(Variable::MultiplierLeft(i))
             }
             Some(i) => {
@@ -322,10 +332,10 @@ impl<'g, T: BorrowMut<Transcript>> Prover<'g, T> {
         let n = self.secrets.a_L.len();
         let m = self.secrets.v.len();
 
-        let mut wL = vec![Scalar::zero(); n];
-        let mut wR = vec![Scalar::zero(); n];
-        let mut wO = vec![Scalar::zero(); n];
-        let mut wV = vec![Scalar::zero(); m];
+        let mut wL = vec![Scalar::ZERO; n];
+        let mut wR = vec![Scalar::ZERO; n];
+        let mut wO = vec![Scalar::ZERO; n];
+        let mut wV = vec![Scalar::ZERO; m];
 
         let mut exp_z = *z;
         for lc in self.constraints.iter() {
@@ -361,11 +371,19 @@ impl<'g, T: BorrowMut<Transcript>> Prover<'g, T> {
             .map(|(var, coeff)| {
                 coeff
                     * match var {
+<<<<<<< HEAD
                         Variable::MultiplierLeft(i) => self.secrets.a_L[*i],
                         Variable::MultiplierRight(i) => self.secrets.a_R[*i],
                         Variable::MultiplierOutput(i) => self.secrets.a_O[*i],
                         Variable::Committed(i) => self.secrets.v[*i],
                         Variable::One() => Scalar::one(),
+=======
+                        Variable::MultiplierLeft(i) => self.a_L[*i],
+                        Variable::MultiplierRight(i) => self.a_R[*i],
+                        Variable::MultiplierOutput(i) => self.a_O[*i],
+                        Variable::Committed(i) => self.v[*i],
+                        Variable::One() => Scalar::ONE,
+>>>>>>> oleg/modernized-toolchain
                     }
             })
             .sum()
@@ -518,7 +536,7 @@ impl<'g, T: BorrowMut<Transcript>> Prover<'g, T> {
                 Scalar::random(&mut rng),
             )
         } else {
-            (Scalar::zero(), Scalar::zero(), Scalar::zero())
+            (Scalar::ZERO, Scalar::ZERO, Scalar::ZERO)
         };
 
         let mut s_L2: Vec<Scalar> = (0..n2).map(|_| Scalar::random(&mut rng)).collect();
@@ -580,7 +598,7 @@ impl<'g, T: BorrowMut<Transcript>> Prover<'g, T> {
         let mut l_poly = util::VecPoly3::zero(n);
         let mut r_poly = util::VecPoly3::zero(n);
 
-        let mut exp_y = Scalar::one(); // y^n starting at n=0
+        let mut exp_y = Scalar::ONE; // y^n starting at n=0
         let y_inv = y.invert();
         let exp_y_inv = util::exp_iter(y_inv).take(padded_n).collect::<Vec<_>>();
 
@@ -651,10 +669,10 @@ impl<'g, T: BorrowMut<Transcript>> Prover<'g, T> {
         let t_x = t_poly.eval(x);
         let t_x_blinding = t_blinding_poly.eval(x);
         let mut l_vec = l_poly.eval(x);
-        l_vec.append(&mut vec![Scalar::zero(); pad]);
+        l_vec.append(&mut vec![Scalar::ZERO; pad]);
 
         let mut r_vec = r_poly.eval(x);
-        r_vec.append(&mut vec![Scalar::zero(); pad]);
+        r_vec.append(&mut vec![Scalar::ZERO; pad]);
 
         // XXX this should refer to the notes to explain why this is correct
         for i in n..padded_n {
@@ -676,7 +694,7 @@ impl<'g, T: BorrowMut<Transcript>> Prover<'g, T> {
         let w = transcript.challenge_scalar(b"w");
         let Q = w * self.pc_gens.B;
 
-        let G_factors = iter::repeat(Scalar::one())
+        let G_factors = iter::repeat(Scalar::ONE)
             .take(n1)
             .chain(iter::repeat(u).take(n2 + pad))
             .collect::<Vec<_>>();
@@ -706,7 +724,7 @@ impl<'g, T: BorrowMut<Transcript>> Prover<'g, T> {
             .chain(s_R1.iter_mut())
             .chain(s_R2.iter_mut())
         {
-            scalar.clear();
+            scalar.zeroize();
         }
         let proof = R1CSProof {
             A_I1,

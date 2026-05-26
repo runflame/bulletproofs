@@ -1,5 +1,9 @@
 #![allow(non_snake_case)]
+<<<<<<< HEAD
 #![cfg_attr(feature = "docs", doc(include = "../docs/inner-product-protocol.md"))]
+=======
+#![doc = include_str!("../docs/inner-product-protocol.md")]
+>>>>>>> oleg/modernized-toolchain
 
 extern crate alloc;
 
@@ -398,10 +402,11 @@ impl InnerProductProof {
         }
 
         let pos = 2 * lg_n * 32;
-        let a =
-            Scalar::from_canonical_bytes(read32(&slice[pos..])).ok_or(ProofError::FormatError)?;
-        let b = Scalar::from_canonical_bytes(read32(&slice[pos + 32..]))
+        let a = Option::<Scalar>::from(Scalar::from_canonical_bytes(read32(&slice[pos..])))
             .ok_or(ProofError::FormatError)?;
+        let b =
+            Option::<Scalar>::from(Scalar::from_canonical_bytes(read32(&slice[pos + 32..])))
+                .ok_or(ProofError::FormatError)?;
 
         Ok(InnerProductProof { L_vec, R_vec, a, b })
     }
@@ -413,7 +418,7 @@ impl InnerProductProof {
 /// \\]
 /// Panics if the lengths of \\(\mathbf{a}\\) and \\(\mathbf{b}\\) are not equal.
 pub fn inner_product(a: &[Scalar], b: &[Scalar]) -> Scalar {
-    let mut out = Scalar::zero();
+    let mut out = Scalar::ZERO;
     if a.len() != b.len() {
         panic!("inner_product(a,b): lengths of vectors do not match");
     }
@@ -446,7 +451,7 @@ mod tests {
         let b: Vec<_> = (0..n).map(|_| Scalar::random(&mut rng)).collect();
         let c = inner_product(&a, &b);
 
-        let G_factors: Vec<Scalar> = iter::repeat(Scalar::one()).take(n).collect();
+        let G_factors: Vec<Scalar> = iter::repeat(Scalar::ONE).take(n).collect();
 
         // y_inv is (the inverse of) a random challenge
         let y_inv = Scalar::random(&mut rng);
@@ -483,7 +488,7 @@ mod tests {
             .verify(
                 n,
                 &mut verifier,
-                iter::repeat(Scalar::one()).take(n),
+                iter::repeat(Scalar::ONE).take(n),
                 util::exp_iter(y_inv).take(n),
                 &P,
                 &Q,
@@ -498,7 +503,7 @@ mod tests {
             .verify(
                 n,
                 &mut verifier,
-                iter::repeat(Scalar::one()).take(n),
+                iter::repeat(Scalar::ONE).take(n),
                 util::exp_iter(y_inv).take(n),
                 &P,
                 &Q,
