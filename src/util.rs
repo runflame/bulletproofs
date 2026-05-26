@@ -5,8 +5,8 @@ extern crate alloc;
 
 use alloc::vec;
 use alloc::vec::Vec;
-use clear_on_drop::clear::Clear;
 use curve25519_dalek::scalar::Scalar;
+use zeroize::Zeroize;
 
 use crate::inner_product_proof::inner_product;
 
@@ -62,7 +62,7 @@ impl Iterator for ScalarExp {
 
 /// Return an iterator of the powers of `x`.
 pub fn exp_iter(x: Scalar) -> ScalarExp {
-    let next_exp_x = Scalar::one();
+    let next_exp_x = Scalar::ONE;
     ScalarExp { x, next_exp_x }
 }
 
@@ -71,7 +71,7 @@ pub fn add_vec(a: &[Scalar], b: &[Scalar]) -> Vec<Scalar> {
         // throw some error
         //println!("lengths of vectors don't match for vector addition");
     }
-    let mut out = vec![Scalar::zero(); b.len()];
+    let mut out = vec![Scalar::ZERO; b.len()];
     for i in 0..a.len() {
         out[i] = a[i] + b[i];
     }
@@ -80,7 +80,7 @@ pub fn add_vec(a: &[Scalar], b: &[Scalar]) -> Vec<Scalar> {
 
 impl VecPoly1 {
     pub fn zero(n: usize) -> Self {
-        VecPoly1(vec![Scalar::zero(); n], vec![Scalar::zero(); n])
+        VecPoly1(vec![Scalar::ZERO; n], vec![Scalar::ZERO; n])
     }
 
     pub fn inner_product(&self, rhs: &VecPoly1) -> Poly2 {
@@ -101,7 +101,7 @@ impl VecPoly1 {
 
     pub fn eval(&self, x: Scalar) -> Vec<Scalar> {
         let n = self.0.len();
-        let mut out = vec![Scalar::zero(); n];
+        let mut out = vec![Scalar::ZERO; n];
         for i in 0..n {
             out[i] = self.0[i] + self.1[i] * x;
         }
@@ -113,10 +113,10 @@ impl VecPoly1 {
 impl VecPoly3 {
     pub fn zero(n: usize) -> Self {
         VecPoly3(
-            vec![Scalar::zero(); n],
-            vec![Scalar::zero(); n],
-            vec![Scalar::zero(); n],
-            vec![Scalar::zero(); n],
+            vec![Scalar::ZERO; n],
+            vec![Scalar::ZERO; n],
+            vec![Scalar::ZERO; n],
+            vec![Scalar::ZERO; n],
         )
     }
 
@@ -146,7 +146,7 @@ impl VecPoly3 {
 
     pub fn eval(&self, x: Scalar) -> Vec<Scalar> {
         let n = self.0.len();
-        let mut out = vec![Scalar::zero(); n];
+        let mut out = vec![Scalar::ZERO; n];
         for i in 0..n {
             out[i] = self.0[i] + x * (self.1[i] + x * (self.2[i] + x * self.3[i]));
         }
@@ -170,19 +170,19 @@ impl Poly6 {
 impl Drop for VecPoly1 {
     fn drop(&mut self) {
         for e in self.0.iter_mut() {
-            e.clear();
+            e.zeroize();
         }
         for e in self.1.iter_mut() {
-            e.clear();
+            e.zeroize();
         }
     }
 }
 
 impl Drop for Poly2 {
     fn drop(&mut self) {
-        self.0.clear();
-        self.1.clear();
-        self.2.clear();
+        self.0.zeroize();
+        self.1.zeroize();
+        self.2.zeroize();
     }
 }
 
@@ -190,16 +190,16 @@ impl Drop for Poly2 {
 impl Drop for VecPoly3 {
     fn drop(&mut self) {
         for e in self.0.iter_mut() {
-            e.clear();
+            e.zeroize();
         }
         for e in self.1.iter_mut() {
-            e.clear();
+            e.zeroize();
         }
         for e in self.2.iter_mut() {
-            e.clear();
+            e.zeroize();
         }
         for e in self.3.iter_mut() {
-            e.clear();
+            e.zeroize();
         }
     }
 }
@@ -207,12 +207,12 @@ impl Drop for VecPoly3 {
 #[cfg(feature = "yoloproofs")]
 impl Drop for Poly6 {
     fn drop(&mut self) {
-        self.t1.clear();
-        self.t2.clear();
-        self.t3.clear();
-        self.t4.clear();
-        self.t5.clear();
-        self.t6.clear();
+        self.t1.zeroize();
+        self.t2.zeroize();
+        self.t3.zeroize();
+        self.t4.zeroize();
+        self.t5.zeroize();
+        self.t6.zeroize();
     }
 }
 
@@ -220,7 +220,7 @@ impl Drop for Poly6 {
 /// with (1 to 2)*lg(n) scalar multiplications.
 /// TODO: a consttime version of this would be awfully similar to a Montgomery ladder.
 pub fn scalar_exp_vartime(x: &Scalar, mut n: u64) -> Scalar {
-    let mut result = Scalar::one();
+    let mut result = Scalar::ONE;
     let mut aux = *x; // x, x^2, x^4, x^8, ...
     while n > 0 {
         let bit = n & 1;
@@ -245,7 +245,7 @@ pub fn sum_of_powers(x: &Scalar, n: usize) -> Scalar {
         return Scalar::from(n as u64);
     }
     let mut m = n;
-    let mut result = Scalar::one() + x;
+    let mut result = Scalar::ONE + x;
     let mut factor = *x;
     while m > 2 {
         factor = factor * factor;
@@ -300,7 +300,7 @@ mod tests {
 
     /// Raises `x` to the power `n`.
     fn scalar_exp_vartime_slow(x: &Scalar, n: u64) -> Scalar {
-        let mut result = Scalar::one();
+        let mut result = Scalar::ONE;
         for _ in 0..n {
             result = result * x;
         }
@@ -312,7 +312,7 @@ mod tests {
         let x = Scalar::from_bits(
             *b"\x84\xfc\xbcOx\x12\xa0\x06\xd7\x91\xd9z:'\xdd\x1e!CE\xf7\xb1\xb9Vz\x810sD\x96\x85\xb5\x07",
         );
-        assert_eq!(scalar_exp_vartime(&x, 0), Scalar::one());
+        assert_eq!(scalar_exp_vartime(&x, 0), Scalar::ONE);
         assert_eq!(scalar_exp_vartime(&x, 1), x);
         assert_eq!(scalar_exp_vartime(&x, 2), x * x);
         assert_eq!(scalar_exp_vartime(&x, 3), x * x * x);
@@ -341,8 +341,8 @@ mod tests {
     #[test]
     fn test_sum_of_powers_slow() {
         let x = Scalar::from(10u64);
-        assert_eq!(sum_of_powers_slow(&x, 0), Scalar::zero());
-        assert_eq!(sum_of_powers_slow(&x, 1), Scalar::one());
+        assert_eq!(sum_of_powers_slow(&x, 0), Scalar::ZERO);
+        assert_eq!(sum_of_powers_slow(&x, 1), Scalar::ONE);
         assert_eq!(sum_of_powers_slow(&x, 2), Scalar::from(11u64));
         assert_eq!(sum_of_powers_slow(&x, 3), Scalar::from(111u64));
         assert_eq!(sum_of_powers_slow(&x, 4), Scalar::from(1111u64));
@@ -355,7 +355,7 @@ mod tests {
         let mut v = vec![Scalar::from(24u64), Scalar::from(42u64)];
 
         for e in v.iter_mut() {
-            e.clear();
+            e.zeroize();
         }
 
         fn flat_slice<T>(x: &[T]) -> &[u8] {
@@ -366,8 +366,8 @@ mod tests {
         }
 
         assert_eq!(flat_slice(&v.as_slice()), &[0u8; 64][..]);
-        assert_eq!(v[0], Scalar::zero());
-        assert_eq!(v[1], Scalar::zero());
+        assert_eq!(v[0], Scalar::ZERO);
+        assert_eq!(v[1], Scalar::ZERO);
     }
 
     #[test]
@@ -378,9 +378,9 @@ mod tests {
             Scalar::from(255u64),
         );
 
-        v.0.clear();
-        v.1.clear();
-        v.2.clear();
+        v.0.zeroize();
+        v.1.zeroize();
+        v.2.zeroize();
 
         fn as_bytes<T>(x: &T) -> &[u8] {
             use core::mem;
@@ -390,8 +390,8 @@ mod tests {
         }
 
         assert_eq!(as_bytes(&v), &[0u8; 96][..]);
-        assert_eq!(v.0, Scalar::zero());
-        assert_eq!(v.1, Scalar::zero());
-        assert_eq!(v.2, Scalar::zero());
+        assert_eq!(v.0, Scalar::ZERO);
+        assert_eq!(v.1, Scalar::ZERO);
+        assert_eq!(v.2, Scalar::ZERO);
     }
 }
