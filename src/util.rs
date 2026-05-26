@@ -309,7 +309,7 @@ mod tests {
 
     #[test]
     fn test_scalar_exp() {
-        let x = Scalar::from_bits(
+        let x = Scalar::from_bytes_mod_order(
             *b"\x84\xfc\xbcOx\x12\xa0\x06\xd7\x91\xd9z:'\xdd\x1e!CE\xf7\xb1\xb9Vz\x810sD\x96\x85\xb5\x07",
         );
         assert_eq!(scalar_exp_vartime(&x, 0), Scalar::ONE);

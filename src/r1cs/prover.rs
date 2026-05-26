@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 
+use core::borrow::BorrowMut;
 use core::mem;
 use zeroize::Zeroize;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
