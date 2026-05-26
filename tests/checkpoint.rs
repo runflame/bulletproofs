@@ -20,7 +20,7 @@ fn rollback_restores_multipliers() {
     let mut prover = Prover::new(&pc_gens, &mut t);
 
     let cp = prover.checkpoint();
-    assert_eq!(prover.multipliers_len(), 0);
+    assert_eq!(prover.metrics().multipliers, 0);
 
     prover
         .allocate_multiplier(Some((Scalar::from(2u64), Scalar::from(3u64))))
@@ -28,10 +28,10 @@ fn rollback_restores_multipliers() {
     prover
         .allocate_multiplier(Some((Scalar::from(4u64), Scalar::from(5u64))))
         .unwrap();
-    assert_eq!(prover.multipliers_len(), 2);
+    assert_eq!(prover.metrics().multipliers, 2);
 
     prover.rollback(cp);
-    assert_eq!(prover.multipliers_len(), 0);
+    assert_eq!(prover.metrics().multipliers, 0);
 }
 
 // commit_checkpoint keeps everything done since the checkpoint.
@@ -46,7 +46,7 @@ fn commit_keeps_changes() {
         .allocate_multiplier(Some((Scalar::from(2u64), Scalar::from(3u64))))
         .unwrap();
     prover.commit_checkpoint(cp);
-    assert_eq!(prover.multipliers_len(), 1);
+    assert_eq!(prover.metrics().multipliers, 1);
 }
 
 // try_block returns Ok -> changes persist.
@@ -61,7 +61,7 @@ fn try_block_ok_keeps_changes() {
         Ok(())
     });
     assert!(res.is_ok());
-    assert_eq!(prover.multipliers_len(), 1);
+    assert_eq!(prover.metrics().multipliers, 1);
 }
 
 // try_block returns Err -> changes are rolled back.
@@ -77,7 +77,7 @@ fn try_block_err_rolls_back() {
         Err("intentional")
     });
     assert_eq!(res, Err("intentional"));
-    assert_eq!(prover.multipliers_len(), 0);
+    assert_eq!(prover.metrics().multipliers, 0);
 }
 
 // Rolling back across a pending-multiplier flip restores the half-allocated slot.
@@ -103,7 +103,7 @@ fn rollback_restores_pending_multiplier() {
     // allocate should target the right slot of the same multiplier.
     let right_again = prover.allocate(Some(Scalar::from(42u64))).unwrap();
     assert_eq!(right_again, Variable::MultiplierRight(0));
-    assert_eq!(prover.multipliers_len(), 1);
+    assert_eq!(prover.metrics().multipliers, 1);
 }
 
 // Nested checkpoints stack independently.
@@ -115,7 +115,7 @@ fn nested_checkpoints() {
 
     let outer = prover.checkpoint();
     prover
-        .allocate_multiplier(Some((Scalar::one(), Scalar::one())))
+        .allocate_multiplier(Some((Scalar::ONE, Scalar::ONE)))
         .unwrap();
 
     let inner = prover.checkpoint();
@@ -125,18 +125,18 @@ fn nested_checkpoints() {
     prover
         .allocate_multiplier(Some((Scalar::from(3u64), Scalar::from(3u64))))
         .unwrap();
-    assert_eq!(prover.multipliers_len(), 3);
+    assert_eq!(prover.metrics().multipliers, 3);
 
     prover.rollback(inner);
-    assert_eq!(prover.multipliers_len(), 1);
+    assert_eq!(prover.metrics().multipliers, 1);
 
     prover
         .allocate_multiplier(Some((Scalar::from(4u64), Scalar::from(4u64))))
         .unwrap();
-    assert_eq!(prover.multipliers_len(), 2);
+    assert_eq!(prover.metrics().multipliers, 2);
 
     prover.rollback(outer);
-    assert_eq!(prover.multipliers_len(), 0);
+    assert_eq!(prover.metrics().multipliers, 0);
 }
 
 // A circuit assembled with rolled-back noise yields a proof that verifies

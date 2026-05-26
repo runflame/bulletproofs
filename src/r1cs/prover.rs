@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use core::borrow::BorrowMut;
+use core::borrow::{Borrow, BorrowMut};
 use core::mem;
 use zeroize::Zeroize;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
@@ -729,43 +729,43 @@ impl<'g, T: BorrowMut<Transcript>> Prover<'g, T> {
     }
 }
 
-impl<'t, 'g> CheckpointableConstraintSystem for Prover<'t, 'g> {
+impl<'g, T: BorrowMut<Transcript>> CheckpointableConstraintSystem for Prover<'g, T> {
     fn checkpoint(&self) -> Checkpoint {
         Checkpoint {
-            transcript: self.transcript.clone(),
+            transcript: Borrow::<Transcript>::borrow(&self.transcript).clone(),
             pending_multiplier: self.pending_multiplier,
             n_constraints: self.constraints.len(),
-            n_multipliers: self.a_L.len(),
-            n_committed: self.v.len(),
+            n_multipliers: self.secrets.a_L.len(),
+            n_committed: self.secrets.v.len(),
             n_deferred: self.deferred_constraints.len(),
         }
     }
 
     fn rollback(&mut self, cp: Checkpoint) {
         // Zero the witness data that's about to be dropped, matching the
-        // security property of `Drop for Prover`.
-        for e in self.a_L[cp.n_multipliers..].iter_mut() {
-            e.clear();
+        // security property of `Drop for Secrets`.
+        for e in self.secrets.a_L[cp.n_multipliers..].iter_mut() {
+            e.zeroize();
         }
-        for e in self.a_R[cp.n_multipliers..].iter_mut() {
-            e.clear();
+        for e in self.secrets.a_R[cp.n_multipliers..].iter_mut() {
+            e.zeroize();
         }
-        for e in self.a_O[cp.n_multipliers..].iter_mut() {
-            e.clear();
+        for e in self.secrets.a_O[cp.n_multipliers..].iter_mut() {
+            e.zeroize();
         }
-        for e in self.v[cp.n_committed..].iter_mut() {
-            e.clear();
+        for e in self.secrets.v[cp.n_committed..].iter_mut() {
+            e.zeroize();
         }
-        for e in self.v_blinding[cp.n_committed..].iter_mut() {
-            e.clear();
+        for e in self.secrets.v_blinding[cp.n_committed..].iter_mut() {
+            e.zeroize();
         }
 
         self.constraints.truncate(cp.n_constraints);
-        self.a_L.truncate(cp.n_multipliers);
-        self.a_R.truncate(cp.n_multipliers);
-        self.a_O.truncate(cp.n_multipliers);
-        self.v.truncate(cp.n_committed);
-        self.v_blinding.truncate(cp.n_committed);
+        self.secrets.a_L.truncate(cp.n_multipliers);
+        self.secrets.a_R.truncate(cp.n_multipliers);
+        self.secrets.a_O.truncate(cp.n_multipliers);
+        self.secrets.v.truncate(cp.n_committed);
+        self.secrets.v_blinding.truncate(cp.n_committed);
         self.deferred_constraints.truncate(cp.n_deferred);
 
         // If a multiplier was half-allocated at checkpoint time and got filled
@@ -773,17 +773,17 @@ impl<'t, 'g> CheckpointableConstraintSystem for Prover<'t, 'g> {
         // pending-multiplier invariant holds.
         if let Some(i) = cp.pending_multiplier {
             if i < cp.n_multipliers {
-                self.a_R[i] = Scalar::zero();
-                self.a_O[i] = Scalar::zero();
+                self.secrets.a_R[i].zeroize();
+                self.secrets.a_O[i].zeroize();
             }
         }
         self.pending_multiplier = cp.pending_multiplier;
 
-        *self.transcript = cp.transcript;
+        *self.transcript.borrow_mut() = cp.transcript;
     }
 }
 
-impl<'t, 'g> CheckpointableConstraintSystem for RandomizingProver<'t, 'g> {
+impl<'g, T: BorrowMut<Transcript>> CheckpointableConstraintSystem for RandomizingProver<'g, T> {
     fn checkpoint(&self) -> Checkpoint {
         self.prover.checkpoint()
     }

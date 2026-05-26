@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use core::borrow::BorrowMut;
+use core::borrow::{Borrow, BorrowMut};
 use core::mem;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
@@ -518,10 +518,10 @@ impl<T: BorrowMut<Transcript>> Verifier<T> {
     }
 }
 
-impl<'t> CheckpointableConstraintSystem for Verifier<'t> {
+impl<T: BorrowMut<Transcript>> CheckpointableConstraintSystem for Verifier<T> {
     fn checkpoint(&self) -> Checkpoint {
         Checkpoint {
-            transcript: self.transcript.clone(),
+            transcript: Borrow::<Transcript>::borrow(&self.transcript).clone(),
             pending_multiplier: self.pending_multiplier,
             n_constraints: self.constraints.len(),
             n_multipliers: self.num_vars,
@@ -536,11 +536,11 @@ impl<'t> CheckpointableConstraintSystem for Verifier<'t> {
         self.V.truncate(cp.n_committed);
         self.deferred_constraints.truncate(cp.n_deferred);
         self.pending_multiplier = cp.pending_multiplier;
-        *self.transcript = cp.transcript;
+        *self.transcript.borrow_mut() = cp.transcript;
     }
 }
 
-impl<'t> CheckpointableConstraintSystem for RandomizingVerifier<'t> {
+impl<T: BorrowMut<Transcript>> CheckpointableConstraintSystem for RandomizingVerifier<T> {
     fn checkpoint(&self) -> Checkpoint {
         self.verifier.checkpoint()
     }
