@@ -1,12 +1,6 @@
-<<<<<<< HEAD
-#![cfg_attr(feature = "docs", doc(include = "../../docs/r1cs-docs-example.md"))]
-
-#[cfg_attr(feature = "docs", doc(include = "../../docs/cs-proof.md"))]
-=======
 #![doc = include_str!("../../docs/r1cs-docs-example.md")]
 
 #[doc = include_str!("../../docs/cs-proof.md")]
->>>>>>> oleg/modernized-toolchain
 mod notes {}
 
 mod constraint_system;

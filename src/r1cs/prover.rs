@@ -1,10 +1,5 @@
 #![allow(non_snake_case)]
 
-<<<<<<< HEAD
-use clear_on_drop::clear::Clear;
-use core::borrow::BorrowMut;
-=======
->>>>>>> oleg/modernized-toolchain
 use core::mem;
 use zeroize::Zeroize;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
@@ -139,15 +134,9 @@ impl<'g, T: BorrowMut<Transcript>> ConstraintSystem for Prover<'g, T> {
             None => {
                 let i = self.secrets.a_L.len();
                 self.pending_multiplier = Some(i);
-<<<<<<< HEAD
                 self.secrets.a_L.push(scalar);
-                self.secrets.a_R.push(Scalar::zero());
-                self.secrets.a_O.push(Scalar::zero());
-=======
-                self.a_L.push(scalar);
-                self.a_R.push(Scalar::ZERO);
-                self.a_O.push(Scalar::ZERO);
->>>>>>> oleg/modernized-toolchain
+                self.secrets.a_R.push(Scalar::ZERO);
+                self.secrets.a_O.push(Scalar::ZERO);
                 Ok(Variable::MultiplierLeft(i))
             }
             Some(i) => {
@@ -371,19 +360,11 @@ impl<'g, T: BorrowMut<Transcript>> Prover<'g, T> {
             .map(|(var, coeff)| {
                 coeff
                     * match var {
-<<<<<<< HEAD
                         Variable::MultiplierLeft(i) => self.secrets.a_L[*i],
                         Variable::MultiplierRight(i) => self.secrets.a_R[*i],
                         Variable::MultiplierOutput(i) => self.secrets.a_O[*i],
                         Variable::Committed(i) => self.secrets.v[*i],
-                        Variable::One() => Scalar::one(),
-=======
-                        Variable::MultiplierLeft(i) => self.a_L[*i],
-                        Variable::MultiplierRight(i) => self.a_R[*i],
-                        Variable::MultiplierOutput(i) => self.a_O[*i],
-                        Variable::Committed(i) => self.v[*i],
                         Variable::One() => Scalar::ONE,
->>>>>>> oleg/modernized-toolchain
                     }
             })
             .sum()

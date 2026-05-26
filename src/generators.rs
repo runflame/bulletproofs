@@ -12,13 +12,8 @@ use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::MultiscalarMul;
-<<<<<<< HEAD
-use digest::{ExtendableOutputDirty, Update, XofReader};
-use sha3::{Sha3XofReader, Sha3_512, Shake256};
-=======
 use digest::{ExtendableOutput, Update, XofReader};
 use sha3::{Sha3_512, Shake256, Shake256Reader};
->>>>>>> oleg/modernized-toolchain
 
 /// Represents a pair of base points for Pedersen commitments.
 ///
@@ -72,11 +67,7 @@ impl GeneratorsChain {
         shake.update(label);
 
         GeneratorsChain {
-<<<<<<< HEAD
-            reader: shake.finalize_xof_dirty(),
-=======
             reader: shake.finalize_xof(),
->>>>>>> oleg/modernized-toolchain
         }
     }
 

@@ -1,9 +1,5 @@
 #![allow(non_snake_case)]
-<<<<<<< HEAD
-#![cfg_attr(feature = "docs", doc(include = "../docs/inner-product-protocol.md"))]
-=======
 #![doc = include_str!("../docs/inner-product-protocol.md")]
->>>>>>> oleg/modernized-toolchain
 
 extern crate alloc;
 
