@@ -8,8 +8,8 @@ use curve25519_dalek::traits::VartimeMultiscalarMul;
 use merlin::Transcript;
 
 use super::{
-    ConstraintSystem, LinearCombination, R1CSProof, RandomizableConstraintSystem,
-    RandomizedConstraintSystem, Variable,
+    Checkpoint, CheckpointableConstraintSystem, ConstraintSystem, LinearCombination, R1CSProof,
+    RandomizableConstraintSystem, RandomizedConstraintSystem, Variable,
 };
 
 use crate::errors::R1CSError;
@@ -515,5 +515,37 @@ impl<T: BorrowMut<Transcript>> Verifier<T> {
         }
 
         Ok(self.transcript)
+    }
+}
+
+impl<'t> CheckpointableConstraintSystem for Verifier<'t> {
+    fn checkpoint(&self) -> Checkpoint {
+        Checkpoint {
+            transcript: self.transcript.clone(),
+            pending_multiplier: self.pending_multiplier,
+            n_constraints: self.constraints.len(),
+            n_multipliers: self.num_vars,
+            n_committed: self.V.len(),
+            n_deferred: self.deferred_constraints.len(),
+        }
+    }
+
+    fn rollback(&mut self, cp: Checkpoint) {
+        self.constraints.truncate(cp.n_constraints);
+        self.num_vars = cp.n_multipliers;
+        self.V.truncate(cp.n_committed);
+        self.deferred_constraints.truncate(cp.n_deferred);
+        self.pending_multiplier = cp.pending_multiplier;
+        *self.transcript = cp.transcript;
+    }
+}
+
+impl<'t> CheckpointableConstraintSystem for RandomizingVerifier<'t> {
+    fn checkpoint(&self) -> Checkpoint {
+        self.verifier.checkpoint()
+    }
+
+    fn rollback(&mut self, cp: Checkpoint) {
+        self.verifier.rollback(cp)
     }
 }

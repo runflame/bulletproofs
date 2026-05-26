@@ -9,8 +9,8 @@ use curve25519_dalek::traits::{Identity, MultiscalarMul};
 use merlin::Transcript;
 
 use super::{
-    ConstraintSystem, LinearCombination, R1CSProof, RandomizableConstraintSystem,
-    RandomizedConstraintSystem, Variable,
+    Checkpoint, CheckpointableConstraintSystem, ConstraintSystem, LinearCombination, R1CSProof,
+    RandomizableConstraintSystem, RandomizedConstraintSystem, Variable,
 };
 
 use crate::errors::R1CSError;
@@ -726,5 +726,69 @@ impl<'g, T: BorrowMut<Transcript>> Prover<'g, T> {
             ipp_proof,
         };
         Ok((proof, self.transcript))
+    }
+}
+
+impl<'t, 'g> CheckpointableConstraintSystem for Prover<'t, 'g> {
+    fn checkpoint(&self) -> Checkpoint {
+        Checkpoint {
+            transcript: self.transcript.clone(),
+            pending_multiplier: self.pending_multiplier,
+            n_constraints: self.constraints.len(),
+            n_multipliers: self.a_L.len(),
+            n_committed: self.v.len(),
+            n_deferred: self.deferred_constraints.len(),
+        }
+    }
+
+    fn rollback(&mut self, cp: Checkpoint) {
+        // Zero the witness data that's about to be dropped, matching the
+        // security property of `Drop for Prover`.
+        for e in self.a_L[cp.n_multipliers..].iter_mut() {
+            e.clear();
+        }
+        for e in self.a_R[cp.n_multipliers..].iter_mut() {
+            e.clear();
+        }
+        for e in self.a_O[cp.n_multipliers..].iter_mut() {
+            e.clear();
+        }
+        for e in self.v[cp.n_committed..].iter_mut() {
+            e.clear();
+        }
+        for e in self.v_blinding[cp.n_committed..].iter_mut() {
+            e.clear();
+        }
+
+        self.constraints.truncate(cp.n_constraints);
+        self.a_L.truncate(cp.n_multipliers);
+        self.a_R.truncate(cp.n_multipliers);
+        self.a_O.truncate(cp.n_multipliers);
+        self.v.truncate(cp.n_committed);
+        self.v_blinding.truncate(cp.n_committed);
+        self.deferred_constraints.truncate(cp.n_deferred);
+
+        // If a multiplier was half-allocated at checkpoint time and got filled
+        // before rollback, restore its right/output slots to zero so the
+        // pending-multiplier invariant holds.
+        if let Some(i) = cp.pending_multiplier {
+            if i < cp.n_multipliers {
+                self.a_R[i] = Scalar::zero();
+                self.a_O[i] = Scalar::zero();
+            }
+        }
+        self.pending_multiplier = cp.pending_multiplier;
+
+        *self.transcript = cp.transcript;
+    }
+}
+
+impl<'t, 'g> CheckpointableConstraintSystem for RandomizingProver<'t, 'g> {
+    fn checkpoint(&self) -> Checkpoint {
+        self.prover.checkpoint()
+    }
+
+    fn rollback(&mut self, cp: Checkpoint) {
+        self.prover.rollback(cp)
     }
 }

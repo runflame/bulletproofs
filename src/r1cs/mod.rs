@@ -3,6 +3,7 @@
 #[doc = include_str!("../../docs/cs-proof.md")]
 mod notes {}
 
+mod checkpoint;
 mod constraint_system;
 mod linear_combination;
 mod metrics;
@@ -10,6 +11,7 @@ mod proof;
 mod prover;
 mod verifier;
 
+pub use self::checkpoint::{Checkpoint, CheckpointableConstraintSystem};
 pub use self::constraint_system::{
     ConstraintSystem, RandomizableConstraintSystem, RandomizedConstraintSystem,
 };
